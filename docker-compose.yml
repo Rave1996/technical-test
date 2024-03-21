@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: finance
+      POSTGRES_PASSWORD: secret
+    ports:
+      - 5433:5432
+
+  db-testing:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: testing
+      POSTGRES_PASSWORD: secret
+
+  app:
+    build:
+      context: .
+      dockerfile: .deployment/development/Dockerfile
+    environment:
+      - ENVIRONMENT=development
+      - POSTGRESQL_URL=postgresql://postgres:secret@db:5433/finance
+    volumes:
+      - ./src:/app
+    ports:
+      - 9000:9000
+    depends_on:
+      - db
+
+  test:
+    build:
+      context: .
+      dockerfile: .deployment/testing/Dockerfile
+    environment:
+      - ENVIRONMENT=testing
+      - POSTGRESQL_URL=postgresql://postgres:secret@db-testing:5432/testing
+    stdin_open: true
+    tty: true
+    command: sh -c "coverage run -m pytest -s -v --lf --junitxml=reports/unittest_report.xml && coverage xml -o reports/coverage.xml && coverage report"
+    volumes:
+      - .:/app
+    depends_on:
+      - db-testing

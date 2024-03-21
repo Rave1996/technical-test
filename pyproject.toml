@@ -1,0 +1,80 @@
+[tool.poetry]
+name = "mid-technical-test"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.110.0"
+pydantic = "^2.6.4"
+pydantic-settings = "^2.2.1"
+sqlalchemy = "^2.0.28"
+psycopg2-binary = "^2.9.9"
+loguru = "^0.7.2"
+fastapi-pagination = "^0.12.19"
+uvicorn = "^0.28.0"
+pytz = "^2024.1"
+python-dotenv = "^1.0.1"
+email-validator = "^2.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.6.2"
+ruff = "^0.3.2"
+pytest = "^8.1.1"
+coverage = "^7.4.4"
+faker = "^24.2.0"
+httpx = "^0.27.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.ruff]
+src = ["src"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",    # Type hints related, let mypy/pyright handle these.
+    "B904",   # Within an `except` clause, raise exceptions with `raise
+    "BLE001", # Do not catch blind exception: `Exception`
+    "COM812", # "Trailing comma missing". If black is happy, I'm happy.
+    "D",
+    "E501",   # "Line too long". If black is happy, I'm happy.
+    "EM101",  # "Exception must not use a string literal, assign to variable first"
+    "EM102",  # "Exception must not use an f-string literal, assign to variable first"
+    "G004",   # Logging statement uses f-string
+    "PT",
+    "UP007",  # Use `X | Y` for type annotations
+    "SIM108", # "Use ternary operator ...". Ternary is harmful for readability in some cases.
+    "TCH001", # Move application import `a.b.c` into a type-checking block
+    "TCH003", # Move standard library import
+    "TRY003", # "Avoid specifying long messages outside the exception class"
+]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.params.Query",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
