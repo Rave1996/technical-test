@@ -16,11 +16,11 @@ services:
 
   app:
     build:
-      context: .
+      context: ../mid-technical-test
       dockerfile: .deployment/development/Dockerfile
     environment:
       - ENVIRONMENT=development
-      - POSTGRESQL_URL=postgresql://postgres:secret@db:5433/finance
+      - POSTGRESQL_URL=postgresql://postgres:secret@db:5432/finance
     volumes:
       - ./src:/app
     ports:
@@ -30,7 +30,7 @@ services:
 
   test:
     build:
-      context: .
+      context: ../mid-technical-test
       dockerfile: .deployment/testing/Dockerfile
     environment:
       - ENVIRONMENT=testing
