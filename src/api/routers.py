@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from api.healthcheck.endpoints import router as healthcheck_endpoints
-from api.v1.costumers.endpoints import router as customer_endpoints
+from api.v1.customers.endpoints import router as customer_endpoints
 from api.v1.loans.endpoints import router as loan_endpoints
 from core.settings import settings
 
