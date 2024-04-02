@@ -1,8 +1,10 @@
-from fastapi import APIRouter, status, Response, Depends, HTTPException
+from fastapi import APIRouter, status, Response, Depends, HTTPException, Query
 from fastapi_pagination.ext.sqlalchemy import paginate
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
+
+from core.utils.exceptions import *
 
 from api.v1.customers.schemas import CustomerSchema
 from core.utils.responses import PaginationParams, default_pagination_params, EnvelopeResponse
@@ -27,6 +29,7 @@ async def retrieve_customer(id: int = 0, db: Session = Depends(get_session)):
         )
 
         response.body = result
+
     except Exception as exc:
         response.errors = str(exc)
 
@@ -34,8 +37,10 @@ async def retrieve_customer(id: int = 0, db: Session = Depends(get_session)):
 
 
 @router.get("/list", status_code=status.HTTP_200_OK, response_model=EnvelopeResponse)
-async def list_customers(filter: str = '', status: bool = True, db: Session = Depends(get_session),
-                         params: PaginationParams = Depends(default_pagination_params)):
+async def list_customers(
+        filter: str = '', status: bool = Query(True), db: Session = Depends(get_session),
+        params: PaginationParams = Depends(default_pagination_params)
+    ):
     response = EnvelopeResponse()
 
     try:

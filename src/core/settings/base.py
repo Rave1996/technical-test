@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = ENVIRONMENT
 
     PROJECT_NAME: str = "Loans API Service"
-    DESCRIPTION: str = "Microservice to manage costumers loans and payments"
+    DESCRIPTION: str = "Microservice to manage customers loans and payments"
 
     DEFAULT_TIMEZONE: str = "America/Mexico_City"
 

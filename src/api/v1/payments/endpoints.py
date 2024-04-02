@@ -2,26 +2,29 @@ from fastapi import APIRouter, status, Response, Depends, HTTPException
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.orm import Session, Query
 
-from api.v1.loans.schemas import LoanSchema
+
+from api.v1.payments.schemas import PaymentsSchema
 from core.utils.responses import PaginationParams, default_pagination_params, EnvelopeResponse
-from db.models import CustomerORM, LoanORM
+from db.models import CustomerORM, PaymentsORM, LoanORM
 from db.session import get_session
 
-router = APIRouter(prefix="/loans", tags=["Loans"])
+from src.core.utils.datetime import LocalTime
+
+router = APIRouter(prefix="/payments", tags=["Payments"])
 
 
 @router.get("/retrieve/{id}", status_code=status.HTTP_200_OK, response_model=EnvelopeResponse)
-async def retrieve_loan(id: int = 0, db: Session = Depends(get_session)):
+async def retrieve_payment(id: int = 0, db: Session = Depends(get_session)):
     response = EnvelopeResponse()
 
     try:
-        loan = db.query(LoanORM).filter(LoanORM.id == id).first()
+        payment = db.query(PaymentsORM).filter(PaymentsORM.id == id).first()
 
-        if loan is None:
+        if payment is None:
             raise Exception("Record not found")
 
-        result = LoanSchema(
-            id=loan.id, customer_id=loan.customer_id, amount=loan.amount, status=loan.status
+        result = PaymentsSchema(
+            id=payment.id, customer_id=payment.customer_id, amount=payment.amount, status=payment.status
         )
 
         response.body = result
@@ -31,27 +34,27 @@ async def retrieve_loan(id: int = 0, db: Session = Depends(get_session)):
     return response
 
 
-# to check
+
 @router.get("/list", status_code=status.HTTP_200_OK, response_model=EnvelopeResponse)
-async def list_customers(
+async def list_payments(
         filter: str = '', status: bool = Query(True), db: Session = Depends(get_session),
         params: PaginationParams = Depends(default_pagination_params)
     ):
     response = EnvelopeResponse()
 
     try:
-        loans = db.query(LoanORM).join(CustomerORM).order_by(LoanORM.id).filter(LoanORM.status == status)
+        payments = db.query(PaymentsORM).join(CustomerORM).order_by(PaymentsORM.id).filter(PaymentsORM.status == status)
 
         if filter != '':
-            loans = loans.filter(
+            payments = payments.filter(
                 CustomerORM.full_name.ilike(f'%{filter}%') | CustomerORM.email.ilike(f'%{filter}%')
             )
 
         # Working but not receiving query params to alter amounts
-        records = paginate(loans, params=params)
+        records = paginate(payments, params=params)
 
         # Convert models to schemas
-        result = [LoanSchema(**item.dict()) for item in records.items]
+        result = [PaymentsSchema(**item.dict()) for item in records.items]
 
         response.body = result
     except Exception as exc:
@@ -61,36 +64,38 @@ async def list_customers(
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model=EnvelopeResponse)
-async def create_loan(loan: LoanSchema, db: Session = Depends(get_session)):
+async def create_payment(payment: PaymentsSchema, db: Session = Depends(get_session)):
     response = EnvelopeResponse()
 
     try:
         # Validate customer account existence
-        customer = db.query(CustomerORM).filter(CustomerORM.id == loan.customer_id).first()
+        loan = db.query(CustomerORM).filter(LoanORM.id == payment.loan_id).first()
 
-        if customer is None:
+        if loan is None:
             raise Exception("Customer not found")
 
         # Validate parameters' content
-        if loan.customer_id is None or loan.amount is None:
+        if payment.customer_id is None or payment.amount is None:
             raise Exception("Missing parameter")
 
+        amount = payment.amount + ((payment.amount*.15) * 1.16)
+
         # Generate customer record
-        new_loan = LoanORM(customer_id=loan.customer_id, amount=loan.amount)
+        new_payment = PaymentsORM(loan_id=payment.loan_id, amount=amount, issued=LocalTime.now())
 
         # Insert new record
-        db.add(new_loan)
+        db.add(new_payment)
         db.commit()
 
         # Recover new data
-        db.refresh(new_loan)
+        db.refresh(new_payment)
 
         # Convert from model to schema
-        new_loan = LoanSchema(
-            id=new_loan.id, customer_id=new_loan.customer_id, amount=new_loan.amount, status=new_loan.status
+        new_payment = PaymentsSchema(
+            id=new_payment.id, customer_id=new_payment.customer_id, amount=new_payment.amount, status=new_payment.status
         )
 
-        response.body = new_loan
+        response.body = new_payment
     except Exception as exc:
         response.errors = str(exc)
 
@@ -98,12 +103,12 @@ async def create_loan(loan: LoanSchema, db: Session = Depends(get_session)):
 
 
 @router.delete("/delete/{id}", status_code=status.HTTP_200_OK, response_model=EnvelopeResponse)
-async def delete_loan(id: int, db: Session = Depends(get_session)):
+async def delete_payment(id: int, db: Session = Depends(get_session)):
     response = EnvelopeResponse()
 
     try:
         # Validate record existence
-        record = db.query(LoanORM).where(LoanORM.id == id).first()
+        record = db.query(PaymentsORM).where(PaymentsORM.id == id).first()
 
         if record is None:
             raise Exception("Record not found")
@@ -115,7 +120,7 @@ async def delete_loan(id: int, db: Session = Depends(get_session)):
         db.commit()
 
         # Convert from model to schema
-        deleted_customer = LoanSchema(
+        deleted_customer = PaymentsSchema(
             id=record.id, customer_id=record.customer_id, amount=record.amount, status=record.status
         )
 
@@ -127,12 +132,12 @@ async def delete_loan(id: int, db: Session = Depends(get_session)):
 
 
 @router.delete("/disable/{id}", status_code=status.HTTP_200_OK, response_model=EnvelopeResponse)
-async def disable_loan(id: int, db: Session = Depends(get_session)):
+async def disable_payment(id: int, db: Session = Depends(get_session)):
     response = EnvelopeResponse()
 
     try:
         # Validate record existence
-        record = db.query(LoanORM).where(LoanORM.id == id).first()
+        record = db.query(PaymentsORM).where(PaymentsORM.id == id).first()
 
         if record is None:
             raise Exception("Record not found")
@@ -147,7 +152,7 @@ async def disable_loan(id: int, db: Session = Depends(get_session)):
         db.refresh(record)
 
         # Convert from model to schema
-        disabled_customer = LoanSchema(
+        disabled_customer = PaymentsSchema(
             id=record.id, customer_id=record.customer_id, amount=record.amount, status=record.status
         )
 
@@ -164,7 +169,7 @@ async def enable_customer(id: int, db: Session = Depends(get_session)):
 
     try:
         # Validate record existence
-        record = db.query(LoanORM).where(LoanORM.id == id).first()
+        record = db.query(PaymentsORM).where(PaymentsORM.id == id).first()
 
         if record is None:
             raise Exception("Record not found")
@@ -179,7 +184,7 @@ async def enable_customer(id: int, db: Session = Depends(get_session)):
         db.refresh(record)
 
         # Convert from model to schema
-        enabled_customer = LoanSchema(
+        enabled_customer = PaymentsSchema(
             id=record.id, customer_id=record.customer_id, amount=record.amount, status=record.status
         )
 
